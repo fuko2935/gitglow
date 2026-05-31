@@ -12,7 +12,7 @@
 
 If you discover a security vulnerability in GitGlow, please report it by opening a **GitHub Security Advisory** at:
 
-> https://github.com/fukobabatekkral/gitglow/security/advisories/new
+> https://github.com/fuko2935/gitglow/security/advisories/new
 
 Include as much detail as possible:
 - A description of the vulnerability

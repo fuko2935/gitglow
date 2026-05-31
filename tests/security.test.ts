@@ -30,6 +30,13 @@ describe('runSecurityScan – pattern detection', () => {
     expect(violations[0].patternName).toMatch(/OpenAI/i);
   });
 
+  it('detects a generic OpenAI API key format', () => {
+    const key = 'sk-abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJ';
+    const violations = runSecurityScan(makeDiff('.env', `OPENAI_API_KEY=${key}`), defaultConfig);
+    expect(violations.length).toBeGreaterThan(0);
+    expect(violations[0].patternName).toMatch(/OpenAI/i);
+  });
+
   it('detects an AWS access key', () => {
     const violations = runSecurityScan(
       makeDiff('aws.ts', 'const id = "AKIAIOSFODNN7EXAMPLE";'),
