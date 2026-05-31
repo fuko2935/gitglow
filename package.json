@@ -1,5 +1,5 @@
 {
-  "name": "gitglow",
+  "name": "@fukobabatekkral/gitglow",
   "version": "1.0.0",
   "description": "Premium AI-Powered Git & PR Automation CLI",
   "main": "dist/index.js",
