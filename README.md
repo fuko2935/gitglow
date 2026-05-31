@@ -1,7 +1,7 @@
 <div align="center">
 
 # ✨ GitGlow ✨
-### *Premium AI-Powered Git & PR Automation CLI*
+### *A Lightweight AI-Powered CLI for Git Commits & PR Descriptions*
 
 [![GitHub workflow](https://img.shields.io/badge/CI-passing-2ea44f?style=for-the-badge&logo=github-actions&logoColor=white)](https://github.com)
 [![Node version](https://img.shields.io/badge/node-%3E%3D%2018.0.0-blue?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
@@ -9,7 +9,7 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-purple?style=for-the-badge)](https://github.com)
 
 <p align="center">
-  <b>GitGlow</b> is an enterprise-grade terminal companion designed to orchestrate your version control workflows. It uses intelligent local analysis and OpenAI's GPT models to automatically generate standardized semantic commit messages, synthesize structured markdown Pull Request descriptions, and perform zero-dependency credential audits to shield your repositories from hardcoded security keys.
+  <b>GitGlow</b> is a lightweight, focused terminal companion designed to streamline your daily Git workflows. It uses intelligent local analysis and OpenAI's GPT models to automatically draft standardized semantic commit messages, synthesize structured markdown Pull Request descriptions, and perform zero-dependency credential audits to help guard your repositories from accidentally staged security keys.
 </p>
 
 ---
@@ -22,9 +22,9 @@
 
 ## ⚡ Features
 
-*   🤖 **Smart Commits (`gitglow commit`)** — Analyzes your staged changes via git diffs and drafts robust, context-aware commit messages following the strict **Conventional Commits** specification.
-*   🛡️ **Security Shield (`gitglow scan`)** — A high-performance, regex-based static scanning engine that inspects staged changes before commit to prevent leakages of AWS keys, OpenAI keys, GitHub PATs, and Private SSH keys.
-*   📝 **PR Synthesizer (`gitglow pr <baseBranch>`)** — Compares the current branch's commits and code delta against a target branch and designs a full, beautiful Markdown template for your Pull Request.
+*   🤖 **Smart Commits (`gitglow commit`)** — Analyzes staged changes and drafts clean, context-aware commit messages following the **Conventional Commits** specification.
+*   🛡️ **Credential Auditor (`gitglow scan`)** — A focused, regex-based static scanning engine that inspects staged changes before commit to prevent accidental leakage of AWS keys, OpenAI keys, GitHub PATs, and Private SSH keys. Ignores lockfiles and binary media automatically to avoid false positives.
+*   📝 **PR Synthesizer (`gitglow pr <baseBranch>`)** — Compares the current branch's commits and code delta against a target branch and designs a clear Markdown template for your Pull Request.
 *   ⚡ **Zero-Dependency Mock Fallback** — Can run offline or keyless using `--force-mock` or automatic keyless fallbacks, creating a seamless environment for local runs and CI.
 *   🎨 **Interactive & Fluid Interface** — Powered by elegant CLI prompt menus, real-time spinners, and high-contrast color formatting.
 

@@ -1,6 +1,6 @@
 {
   "name": "@fukobabatekkral/gitglow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Premium AI-Powered Git & PR Automation CLI",
   "main": "dist/index.js",
   "type": "module",
