@@ -21,7 +21,7 @@ import { executeScan } from './security.js';
 import { loadConfig } from '../utils/config.js';
 import { generateCommitMessage } from '../utils/openai.js';
 import { validateCommitMessage } from '../utils/validate.js';
-import { GitError } from '../types/index.js';
+import { GitError, CLIError } from '../types/index.js';
 
 export interface CommitOptions {
   forceMock?: boolean;
@@ -48,10 +48,11 @@ export async function commitAction(options: CommitOptions): Promise<void> {
   } catch (err) {
     if (err instanceof GitError) {
       console.error(chalk.red(`✗ Git error: ${err.message}`));
+      throw new CLIError('', 1);
     } else {
       console.error(chalk.red('✗ Unexpected error checking staged files.'), err);
+      throw new CLIError('Unexpected error checking staged files.', 1);
     }
-    process.exit(1);
   }
 
   if (!hasStaged) {
@@ -60,7 +61,7 @@ export async function commitAction(options: CommitOptions): Promise<void> {
         '⚠  No staged files found. Use `git add <file>` to stage changes before committing.',
       ),
     );
-    process.exit(0);
+    throw new CLIError('', 0);
   }
 
   // 2. Load diff + config
@@ -70,7 +71,7 @@ export async function commitAction(options: CommitOptions): Promise<void> {
 
   // 3. Security scan (blocks if violations found)
   if (!executeScan(diff, config)) {
-    process.exit(1);
+    throw new CLIError('Commit blocked due to security scan violations.', 1);
   }
 
   // 4. Privacy notice for AI mode
@@ -99,9 +100,11 @@ export async function commitAction(options: CommitOptions): Promise<void> {
         : 'Regenerating commit message…',
     ).start();
 
+    let raw = '';
+    let validation: ReturnType<typeof validateCommitMessage>;
     try {
-      const raw = await generateCommitMessage(diff, config, useMock);
-      const validation = validateCommitMessage(raw, config.conventionalTypes);
+      raw = await generateCommitMessage(diff, config, useMock);
+      validation = validateCommitMessage(raw, config.conventionalTypes);
 
       if (!validation.valid) {
         spinner.warn(
@@ -121,7 +124,7 @@ export async function commitAction(options: CommitOptions): Promise<void> {
       if (!useMock) {
         console.log(chalk.yellow('Tip: use --no-ai to run in offline mock mode.'));
       }
-      process.exit(1);
+      throw new CLIError('Failed to generate commit message.', 1);
     }
 
     console.log(chalk.cyan.bold('\n--- Suggested Commit Message ---'));
@@ -138,11 +141,18 @@ export async function commitAction(options: CommitOptions): Promise<void> {
     if (options.yes || options.dryRun) {
       if (options.dryRun) {
         console.log(chalk.yellow('Dry-run mode: commit NOT created.'));
-        process.exit(0);
+        throw new CLIError('', 0);
+      }
+      if (!validation.valid) {
+        throw new CLIError(
+          `Generated commit message failed validation: ${validation.error}. ` +
+            `Aborting automatic commit (--yes).`,
+          1,
+        );
       }
       makeCommit(aiMessage);
       console.log(chalk.green.bold('✓ Committed successfully.'));
-      process.exit(0);
+      return;
     }
 
     // Interactive prompt

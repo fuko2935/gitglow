@@ -2,7 +2,7 @@
  * Tests for the commit message validator.
  */
 import { describe, it, expect } from 'vitest';
-import { validateCommitMessage } from '../src/utils/validate.js';
+import { validateCommitMessage, validatePRDescription } from '../src/utils/validate.js';
 
 describe('validateCommitMessage', () => {
   // -------------------------------------------------------------------------
@@ -83,5 +83,38 @@ describe('validateCommitMessage', () => {
     const result = validateCommitMessage(raw);
     expect(result.valid).toBe(true);
     expect(result.message).toBe('fix: correct off-by-one error');
+  });
+});
+
+describe('validatePRDescription', () => {
+  it('accepts a PR description containing all required sections', () => {
+    const markdown = `
+# Awesome PR
+## Summary
+This PR does things.
+
+## Changes proposed
+- Changed file X
+- Updated Y
+
+## Verification Status
+- Verified locally.
+    `;
+    const result = validatePRDescription(markdown);
+    expect(result.valid).toBe(true);
+    expect(result.errors.length).toBe(0);
+  });
+
+  it('rejects a PR description missing summary, changes, or verification', () => {
+    const markdown = `
+# Bad PR
+Just some plain text without proper sections.
+    `;
+    const result = validatePRDescription(markdown);
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBe(3);
+    expect(result.errors[0]).toContain('Summary');
+    expect(result.errors[1]).toContain('Changes');
+    expect(result.errors[2]).toContain('Verification');
   });
 });

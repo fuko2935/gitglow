@@ -31,7 +31,7 @@ export const DEFAULTS: GitGlowConfig = {
     },
     {
       name: 'OpenAI API Key',
-      regex: 'sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20}',
+      regex: 'sk-[a-zA-Z0-9_-]{32,}',
       severity: 'critical',
     },
     {
@@ -104,9 +104,25 @@ export const DEFAULTS: GitGlowConfig = {
       regex: 'eyJ[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,}\\.[a-zA-Z0-9_-]{10,}',
       severity: 'warning',
     },
+    {
+      name: 'Google API Key',
+      regex: 'AIzaSy[A-Za-z0-9_-]{35}',
+      severity: 'critical',
+    },
+    {
+      name: 'Database Connection String',
+      regex: '(?:postgres|postgresql|mongodb|mysql|redis):\\/\\/[a-zA-Z0-9_]+:[a-zA-Z0-9_.-]+@',
+      severity: 'warning',
+    },
+    {
+      name: 'Twilio API Key',
+      regex: 'SK[a-fA-F0-9]{32}',
+      severity: 'critical',
+    },
   ],
   maxDiffBytes: 20_000,
   model: 'gpt-4o-mini',
+  allowlist: [],
 };
 
 /** Keys that are valid in .gitglow.json */
@@ -116,9 +132,91 @@ const KNOWN_KEYS = new Set<string>([
   'securityPatterns',
   'maxDiffBytes',
   'model',
+  'allowlist',
   // openaiApiKey is intentionally excluded from the known-keys set so it
   // triggers the warning below when found in a config file.
 ]);
+
+/**
+ * Validates config format and values.
+ * Returns an array of user-friendly validation error strings.
+ */
+export function validateConfig(parsed: Record<string, unknown>): string[] {
+  const errors: string[] = [];
+
+  if ('language' in parsed) {
+    if (typeof parsed.language !== 'string') {
+      errors.push('"language" must be a string.');
+    }
+  }
+
+  if ('conventionalTypes' in parsed) {
+    if (!Array.isArray(parsed.conventionalTypes)) {
+      errors.push('"conventionalTypes" must be an array.');
+    } else {
+      parsed.conventionalTypes.forEach((t, i) => {
+        if (typeof t !== 'string') {
+          errors.push(`"conventionalTypes[${i}]" must be a string.`);
+        }
+      });
+    }
+  }
+
+  if ('maxDiffBytes' in parsed) {
+    if (typeof parsed.maxDiffBytes !== 'number' || isNaN(parsed.maxDiffBytes) || parsed.maxDiffBytes <= 0) {
+      errors.push('"maxDiffBytes" must be a positive number.');
+    }
+  }
+
+  if ('model' in parsed) {
+    if (typeof parsed.model !== 'string') {
+      errors.push('"model" must be a string.');
+    }
+  }
+
+  if ('allowlist' in parsed) {
+    if (!Array.isArray(parsed.allowlist)) {
+      errors.push('"allowlist" must be an array.');
+    } else {
+      parsed.allowlist.forEach((val, i) => {
+        if (typeof val !== 'string') {
+          errors.push(`"allowlist[${i}]" must be a string.`);
+        }
+      });
+    }
+  }
+
+  if ('securityPatterns' in parsed) {
+    if (!Array.isArray(parsed.securityPatterns)) {
+      errors.push('"securityPatterns" must be an array.');
+    } else {
+      parsed.securityPatterns.forEach((p, i) => {
+        if (typeof p !== 'object' || p === null) {
+          errors.push(`"securityPatterns[${i}]" must be an object.`);
+        } else {
+          const pat = p as Record<string, unknown>;
+          if (typeof pat.name !== 'string') {
+            errors.push(`"securityPatterns[${i}].name" must be a string.`);
+          }
+          if (typeof pat.regex !== 'string') {
+            errors.push(`"securityPatterns[${i}].regex" must be a string.`);
+          } else {
+            try {
+              new RegExp(pat.regex);
+            } catch {
+              errors.push(`"securityPatterns[${i}].regex" is not a valid regular expression.`);
+            }
+          }
+          if ('severity' in pat && pat.severity !== 'critical' && pat.severity !== 'warning') {
+            errors.push(`"securityPatterns[${i}].severity" must be either "critical" or "warning".`);
+          }
+        }
+      });
+    }
+  }
+
+  return errors;
+}
 
 export function loadConfig(configPath?: string): GitGlowConfig {
   const localConfigPath =
@@ -156,5 +254,28 @@ export function loadConfig(configPath?: string): GitGlowConfig {
     }
   }
 
-  return { ...DEFAULTS, ...parsed };
+  // Run schema validation
+  const validationErrors = validateConfig(parsed);
+  if (validationErrors.length > 0) {
+    console.warn(
+      `[GitGlow] Config validation warning at "${localConfigPath}":\n` +
+        validationErrors.map(e => `  - ${e}`).join('\n') +
+        `\nFalling back to default settings for invalid keys.`,
+    );
+  }
+
+  const sanitizedConfig: Partial<GitGlowConfig> = {};
+  for (const key of KNOWN_KEYS) {
+    if (key in parsed) {
+      // Check if this key specifically failed validation
+      const hasError = validationErrors.some(
+        e => e.startsWith(`"${key}"`) || e.startsWith(`"${key}[`),
+      );
+      if (!hasError) {
+        (sanitizedConfig as Record<string, unknown>)[key] = parsed[key];
+      }
+    }
+  }
+
+  return { ...DEFAULTS, ...sanitizedConfig };
 }

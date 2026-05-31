@@ -9,6 +9,9 @@ import { GitGlowConfig, OpenAIResponse } from '../types/index.js';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+const MAX_RETRIES = process.env.NODE_ENV === 'test' ? 0 : 3;
+const INITIAL_BACKOFF_MS = process.env.NODE_ENV === 'test' ? 0 : 1000;
+
 /**
  * Wrap a diff in XML-style delimiters to reduce prompt-injection surface.
  * The model is instructed to treat everything inside <diff> as data, not instructions.
@@ -32,6 +35,27 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/**
+ * Helper to determine if an OpenAI API error is transient and retryable.
+ */
+function isRetryableError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message;
+  // Network connection or fetch failure
+  if (msg.includes('Network error') || msg.includes('NetworkError') || msg.includes('fetch failed')) {
+    return true;
+  }
+  // HTTP status codes: 429 (rate limit) or 5xx (transient server errors)
+  const statusMatch = msg.match(/OpenAI API error (\d+)/i);
+  if (statusMatch) {
+    const status = parseInt(statusMatch[1], 10);
+    if (status === 429 || (status >= 500 && status < 600)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /**
@@ -87,6 +111,35 @@ async function callOpenAI(
   return content.trim();
 }
 
+/**
+ * Call the OpenAI endpoint wrapping it with exponential backoff retry.
+ */
+async function callOpenAIWithRetry(
+  messages: { role: 'system' | 'user'; content: string }[],
+  config: GitGlowConfig,
+  apiKey: string,
+): Promise<string> {
+  let attempt = 0;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    attempt++;
+    try {
+      return await callOpenAI(messages, config, apiKey);
+    } catch (err: unknown) {
+      if (isRetryableError(err) && attempt <= MAX_RETRIES) {
+        const delay = INITIAL_BACKOFF_MS * Math.pow(2, attempt - 1);
+        console.warn(
+          `[GitGlow] OpenAI API warning: request failed (${err instanceof Error ? err.message : String(err)}). ` +
+            `Retrying in ${delay}ms (attempt ${attempt}/${MAX_RETRIES})...`,
+        );
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -100,7 +153,7 @@ export async function generateCommitMessage(
   config: GitGlowConfig,
   forceMock = false,
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY ?? config.openaiApiKey;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey || forceMock) {
     // Honest mock – clearly labelled, no hallucinated facts
@@ -118,7 +171,7 @@ export async function generateCommitMessage(
     return new Promise(resolve => setTimeout(() => resolve(msg), 300));
   }
 
-  return callOpenAI(
+  return callOpenAIWithRetry(
     [
       {
         role: 'system',
@@ -150,7 +203,7 @@ export async function generatePRDescription(
   config: GitGlowConfig,
   forceMock = false,
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY ?? config.openaiApiKey;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey || forceMock) {
     // Honest mock – no fabricated test results
@@ -166,7 +219,7 @@ export async function generatePRDescription(
     return new Promise(resolve => setTimeout(() => resolve(prMarkdown), 300));
   }
 
-  return callOpenAI(
+  return callOpenAIWithRetry(
     [
       {
         role: 'system',

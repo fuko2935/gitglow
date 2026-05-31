@@ -71,10 +71,11 @@ describe('loadConfig – error handling', () => {
     );
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    loadConfig();
+    const config = loadConfig();
 
     const msgs = warnSpy.mock.calls.map(c => c[0] as string);
     expect(msgs.some(m => m.includes('unknownField'))).toBe(true);
+    expect('unknownField' in config).toBe(false);
   });
 
   it('warns when openaiApiKey is found in the config file', () => {
@@ -84,10 +85,11 @@ describe('loadConfig – error handling', () => {
     );
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    loadConfig();
+    const config = loadConfig();
 
     const msgs = warnSpy.mock.calls.map(c => c[0] as string);
     expect(msgs.some(m => m.includes('openaiApiKey'))).toBe(true);
     expect(msgs.some(m => m.match(/security warning/i))).toBe(true);
+    expect('openaiApiKey' in config).toBe(false);
   });
 });

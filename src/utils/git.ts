@@ -96,6 +96,34 @@ export function hasStagedFiles(): boolean {
 }
 
 /**
+ * Safely truncates a string to not exceed maxBytes in UTF-8 representation,
+ * ensuring we do not slice in the middle of a multi-byte UTF-8 character.
+ */
+export function safeTruncateBytes(str: string, maxBytes: number): string {
+  const buf = Buffer.from(str, 'utf8');
+  if (buf.length <= maxBytes) {
+    return str;
+  }
+
+  let end = maxBytes;
+  while (end > 0 && (buf[end] & 0xC0) === 0x80) {
+    end--;
+  }
+
+  const startByte = buf[end];
+  let charLen = 1;
+  if ((startByte & 0xE0) === 0xC0) charLen = 2;
+  else if ((startByte & 0xF0) === 0xE0) charLen = 3;
+  else if ((startByte & 0xF8) === 0xF0) charLen = 4;
+
+  if (end + charLen > maxBytes) {
+    return buf.toString('utf8', 0, end);
+  } else {
+    return buf.toString('utf8', 0, end + charLen);
+  }
+}
+
+/**
  * Returns the staged diff (git diff --cached).
  * Truncates to maxBytes if specified.
  */
@@ -104,7 +132,7 @@ export function getStagedDiff(maxBytes = 0): StagedDiffResult {
   const sizeBytes = Buffer.byteLength(raw, 'utf8');
   const diff =
     maxBytes > 0 && sizeBytes > maxBytes
-      ? raw.slice(0, maxBytes) + '\n\n[...diff truncated at ' + maxBytes + ' bytes...]'
+      ? safeTruncateBytes(raw, maxBytes) + '\n\n[...diff truncated at ' + maxBytes + ' bytes...]'
       : raw;
   return { diff, sizeBytes };
 }
@@ -121,7 +149,7 @@ export function getBranchDiff(baseBranch: string, maxBytes = 0): BranchDiffResul
   const sizeBytes = Buffer.byteLength(rawDiff, 'utf8');
   const diff =
     maxBytes > 0 && sizeBytes > maxBytes
-      ? rawDiff.slice(0, maxBytes) + '\n\n[...diff truncated at ' + maxBytes + ' bytes...]'
+      ? safeTruncateBytes(rawDiff, maxBytes) + '\n\n[...diff truncated at ' + maxBytes + ' bytes...]'
       : rawDiff;
 
   return { diff, commits };

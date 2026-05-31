@@ -98,7 +98,7 @@ function compilePatterns(config: GitGlowConfig): CompiledPattern[] {
 }
 
 // ---------------------------------------------------------------------------
-// Redaction
+// Redaction & Helper functions
 // ---------------------------------------------------------------------------
 
 /**
@@ -111,27 +111,105 @@ function redact(value: string): string {
   return value.slice(0, 4) + '*'.repeat(Math.min(8, value.length - 4));
 }
 
+/**
+ * Calculate Shannon Entropy of a given string.
+ * Used to identify random keys/secrets.
+ */
+function calculateEntropy(str: string): number {
+  const len = str.length;
+  if (len === 0) return 0;
+  const frequencies: Record<string, number> = {};
+  for (const char of str) {
+    frequencies[char] = (frequencies[char] || 0) + 1;
+  }
+  let entropy = 0;
+  for (const char in frequencies) {
+    const p = frequencies[char] / len;
+    entropy -= p * Math.log2(p);
+  }
+  return entropy;
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 
 /**
- * Scan the diff for secret patterns.
+ * Scan the diff for secret patterns and high-entropy anomalies.
  * Returns an array of violations with file path, line number, and redacted content.
  */
 export function runSecurityScan(diff: string, config: GitGlowConfig): SecurityViolation[] {
   const patterns = compilePatterns(config);
   const addedLines = parseAddedLines(diff);
   const violations: SecurityViolation[] = [];
+  const allowlist = config.allowlist ?? [];
 
   for (const { filePath, lineNumber, content } of addedLines) {
+    // Support inline ignore comments (e.g. // gitglow:ignore)
+    if (/gitglow:ignore/i.test(content)) {
+      continue;
+    }
+
+    // 1. Regular expression scanning
     for (const pattern of patterns) {
       const match = content.match(pattern.regex);
       if (match) {
+        const matchedValue = match[0];
+        // Check if value is allowlisted
+        const isAllowlisted = allowlist.some(
+          allowed => allowed === matchedValue || matchedValue.includes(allowed),
+        );
+        if (isAllowlisted) {
+          continue;
+        }
+
         violations.push({
           patternName: pattern.name,
           severity: pattern.severity,
-          lineContent: redact(match[0]) + '  (redacted)',
+          lineContent: redact(matchedValue) + '  (redacted)',
+          filePath,
+          lineNumber,
+        });
+      }
+    }
+
+    // 2. Shannon Entropy scanning for high-entropy tokens (potential unpatterned secrets)
+    const words = content.match(/[A-Za-z0-9_-]{24,64}/g) || [];
+    for (const word of words) {
+      const entropy = calculateEntropy(word);
+      // Heuristics for base64 / hex secrets: length >= 32 with high randomness
+      const isHighEntropy =
+        (word.length >= 32 && entropy > 4.5) ||
+        (word.length >= 24 && entropy > 4.8);
+
+      // Must contain a mix of uppercase, lowercase, and digits to filter out long plain words
+      const hasMixedCaseOrNumbers =
+        /[A-Z]/.test(word) && /[a-z]/.test(word) && /[0-9]/.test(word);
+
+      if (isHighEntropy && hasMixedCaseOrNumbers) {
+        // Skip if this word was already redacted and flagged by a regex rule
+        const alreadyFlagged = violations.some(
+          v =>
+            v.filePath === filePath &&
+            v.lineNumber === lineNumber &&
+            v.lineContent.includes(redact(word)),
+        );
+        if (alreadyFlagged) {
+          continue;
+        }
+
+        // Check if allowlisted
+        const isAllowlisted = allowlist.some(
+          allowed => allowed === word || word.includes(allowed),
+        );
+        if (isAllowlisted) {
+          continue;
+        }
+
+        violations.push({
+          patternName: 'High-Entropy Secret Candidate',
+          severity: 'warning',
+          lineContent: redact(word) + '  (redacted)',
           filePath,
           lineNumber,
         });

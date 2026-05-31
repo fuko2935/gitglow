@@ -1,12 +1,12 @@
 /**
- * Commit message validation.
+ * Commit message and PR description validation.
  *
  * Enforces the Conventional Commits specification:
  *   type(optional-scope): short description
  *
  * Reference: https://www.conventionalcommits.org/en/v1.0.0/
  */
-import { CommitValidationResult } from '../types/index.js';
+import { CommitValidationResult, PRValidationResult } from '../types/index.js';
 
 /** Maximum length of the subject line (type + scope + description) */
 const MAX_SUBJECT_LENGTH = 72;
@@ -86,4 +86,35 @@ export function validateCommitMessage(
   }
 
   return { valid: true, message };
+}
+
+/**
+ * Validates that an AI-generated Pull Request description contains the required Markdown sections.
+ * Expected sections:
+ *  - Summary (e.g. ## Summary, ## Pull Request Summary)
+ *  - Changes (e.g. ## Changes, ## 🛠️ Changes Proposed)
+ *  - Verification (e.g. ## Verification, ## 🔍 Verification Status)
+ */
+export function validatePRDescription(markdown: string): PRValidationResult {
+  const errors: string[] = [];
+  const lowercase = markdown.toLowerCase();
+
+  const hasSummary = lowercase.includes('## summary') || lowercase.includes('pull request summary');
+  const hasChanges = lowercase.includes('## changes') || lowercase.includes('changes proposed');
+  const hasVerification = lowercase.includes('## verification') || lowercase.includes('verification status');
+
+  if (!hasSummary) {
+    errors.push('PR description is missing the "Summary" section (## Summary).');
+  }
+  if (!hasChanges) {
+    errors.push('PR description is missing the "Changes" section (## Changes).');
+  }
+  if (!hasVerification) {
+    errors.push('PR description is missing the "Verification" section (## Verification).');
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
 }

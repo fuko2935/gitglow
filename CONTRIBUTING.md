@@ -11,7 +11,7 @@ Thank you for your interest in contributing! This guide covers the development w
 ## Setup
 
 ```bash
-git clone https://github.com/fukobabatekkral/gitglow.git
+git clone https://github.com/fuko2935/gitglow.git
 cd gitglow
 npm install
 npm run build
@@ -83,5 +83,5 @@ tests/                # Vitest unit tests
 
 ## Reporting Bugs
 
-Please use [GitHub Issues](https://github.com/fukobabatekkral/gitglow/issues).  
+Please use [GitHub Issues](https://github.com/fuko2935/gitglow/issues).
 For **security vulnerabilities**, see [SECURITY.md](./SECURITY.md).

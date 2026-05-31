@@ -17,8 +17,6 @@ export interface SecurityPattern {
 }
 
 export interface GitGlowConfig {
-  /** OpenAI API key – prefer OPENAI_API_KEY env var instead */
-  openaiApiKey?: string;
   /** Language for AI-generated text (e.g. 'en', 'tr') */
   language: string;
   /** Allowed Conventional Commit types */
@@ -29,11 +27,35 @@ export interface GitGlowConfig {
   maxDiffBytes?: number;
   /** OpenAI model to use (default: gpt-4o-mini) */
   model?: string;
+  /** Custom list of values to ignore during security scanning */
+  allowlist?: string[];
 }
 
 // ---------------------------------------------------------------------------
-// Git domain models
+// Domain Errors
 // ---------------------------------------------------------------------------
+
+/** Custom error for clean command-line termination with exit codes */
+export class CLIError extends Error {
+  constructor(
+    message: string,
+    public readonly exitCode = 1,
+  ) {
+    super(message);
+    this.name = 'CLIError';
+  }
+}
+
+/** Typed error for configuration schema validation issues */
+export class ConfigValidationError extends Error {
+  constructor(
+    message: string,
+    public readonly errors: string[],
+  ) {
+    super(message);
+    this.name = 'ConfigValidationError';
+  }
+}
 
 /** Typed error for git command failures */
 export class GitError extends Error {
@@ -100,7 +122,7 @@ export interface OpenAIResponse {
 }
 
 // ---------------------------------------------------------------------------
-// Commit validation
+// Commit & PR validation
 // ---------------------------------------------------------------------------
 
 export interface CommitValidationResult {
@@ -109,4 +131,10 @@ export interface CommitValidationResult {
   message: string;
   /** Human-readable error describing why validation failed */
   error?: string;
+}
+
+export interface PRValidationResult {
+  valid: boolean;
+  /** Human-readable errors describing why validation failed */
+  errors: string[];
 }

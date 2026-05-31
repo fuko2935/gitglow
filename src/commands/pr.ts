@@ -17,7 +17,8 @@ import fs from 'fs';
 import { getBranchDiff } from '../utils/git.js';
 import { loadConfig } from '../utils/config.js';
 import { generatePRDescription } from '../utils/openai.js';
-import { GitError } from '../types/index.js';
+import { validatePRDescription } from '../utils/validate.js';
+import { GitError, CLIError } from '../types/index.js';
 
 export interface PrOptions {
   forceMock?: boolean;
@@ -51,10 +52,11 @@ export async function prAction(baseBranch: string, options: PrOptions): Promise<
   } catch (err) {
     if (err instanceof GitError) {
       console.error(chalk.red(`✗ Git error: ${err.message}`));
+      throw new CLIError('', 1);
     } else {
       console.error(chalk.red('✗ Unexpected error getting branch diff.'), err);
+      throw new CLIError('Unexpected error getting branch diff.', 1);
     }
-    process.exit(1);
   }
 
   if (!diff) {
@@ -64,7 +66,7 @@ export async function prAction(baseBranch: string, options: PrOptions): Promise<
           `Make sure you have committed changes and the base branch exists.`,
       ),
     );
-    process.exit(0);
+    throw new CLIError('', 0);
   }
 
   const useMock =
@@ -83,13 +85,21 @@ export async function prAction(baseBranch: string, options: PrOptions): Promise<
   try {
     prMarkdown = await generatePRDescription(diff, commits, config, useMock);
     spinner.succeed('PR description ready.');
+
+    const prValidation = validatePRDescription(prMarkdown);
+    if (!prValidation.valid) {
+      spinner.warn(
+        `Generated PR description is missing standard sections:\n` +
+          prValidation.errors.map(e => `  - ${e}`).join('\n'),
+      );
+    }
   } catch (err) {
     spinner.fail('Failed to generate PR description.');
     console.error(chalk.red(err instanceof Error ? err.message : String(err)));
     if (!useMock) {
       console.log(chalk.yellow('Tip: use --no-ai to run in offline mock mode.'));
     }
-    process.exit(1);
+    throw new CLIError('Failed to generate PR description.', 1);
   }
 
   // Output
@@ -112,9 +122,9 @@ export async function prAction(baseBranch: string, options: PrOptions): Promise<
       fs.writeFileSync(options.output, prMarkdown, 'utf8');
       console.log(chalk.green(`✓ PR description written to: ${options.output}`));
     } catch (err) {
-      console.error(
-        chalk.red(`✗ Failed to write to "${options.output}": ${err instanceof Error ? err.message : String(err)}`),
-      );
+      const errMsg = `Failed to write PR description to "${options.output}": ${err instanceof Error ? err.message : String(err)}`;
+      console.error(chalk.red(`✗ ${errMsg}`));
+      throw new CLIError(errMsg, 1);
     }
   }
 

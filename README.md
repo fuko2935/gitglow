@@ -4,7 +4,7 @@
 
 ### *AI-Assisted Git Commit & PR Automation CLI*
 
-[![CI](https://github.com/fukobabatekkral/gitglow/actions/workflows/ci.yml/badge.svg)](https://github.com/fukobabatekkral/gitglow/actions/workflows/ci.yml)
+[![CI](https://github.com/fuko2935/gitglow/actions/workflows/ci.yml/badge.svg)](https://github.com/fuko2935/gitglow/actions/workflows/ci.yml)
 [![Node version](https://img.shields.io/badge/node-%3E%3D%2018.0.0-blue?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-orange?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-purple?style=for-the-badge)](CONTRIBUTING.md)
@@ -72,7 +72,7 @@ graph TD
 
 ```bash
 # Clone and install globally
-git clone https://github.com/fukobabatekkral/gitglow.git
+git clone https://github.com/fuko2935/gitglow.git
 cd gitglow
 npm install
 npm run build
@@ -257,11 +257,46 @@ npm run test:coverage
 
 ## ⚠️ Known Limitations
 
-- **Scanner coverage**: The built-in scanner covers common patterns only. It does not detect entropy-based secrets, multiline wrapped keys, or credentials in binary files.
+- **Scanner coverage**: The built-in scanner covers common patterns and now runs entropy-based anomaly detection. For full enterprise compliance, consider [gitleaks](https://github.com/gitleaks/gitleaks) or [truffleHog](https://github.com/trufflesecurity/trufflehog).
 - **AI output**: Commit messages and PR descriptions are AI-generated and should always be reviewed before use. The AI may occasionally produce incorrect or poorly formatted output.
-- **Large diffs**: Diffs larger than `maxDiffBytes` are truncated before being sent to OpenAI. This may reduce the quality of generated messages.
+- **Large diffs**: Diffs larger than `maxDiffBytes` are truncated safely (without splitting multi-byte UTF-8 characters) before being sent to OpenAI. This may reduce the quality of generated messages.
 - **Non-interactive environments**: `gitglow commit` without `--yes` or `--dry-run` requires an interactive terminal. In CI, always pass `--yes` or `--no-ai`.
 - **Windows**: Clipboard support on Windows requires WSL or a compatible clipboard tool. Use `--no-clipboard --output pr.md` as a fallback.
+
+---
+
+## 🔌 Exit Codes
+
+GitGlow follows a strict exit code contract, making it safe and reliable for integration in CI/CD build gates or pre-commit hooks:
+
+| Exit Code | Meaning | Occurs In |
+|-----------|---------|-----------|
+| `0` | Success | All commands (successful completion, clean scans) |
+| `1` | General Failure | Failed OpenAI API requests, command syntax errors, output writing failures, or conventional message format violations |
+| `1` | Secret Scanning Violation | Staged changes contain flagged credentials or high-entropy anomalies |
+
+---
+
+## 🔧 Troubleshooting & Advanced Features
+
+### 🛡️ False Positives Allowlist & Comments
+If the secret scanner flags a valid mock string or safe value, you have two ways to bypass it:
+1. **Config-level Allowlist**: Add the exact value to `allowlist` in `.gitglow.json`:
+   ```json
+   {
+     "allowlist": ["ghp_safeMockTokenExampleString"]
+   }
+   ```
+2. **Inline Comments Override**: Append a comment containing `gitglow:ignore` to the line with the flagged string:
+   ```javascript
+   const testToken = "ghp_mockTokenStringHere"; // gitglow:ignore
+   ```
+
+### 🧠 High-Entropy Secret Detection
+In addition to pattern-matching, GitGlow runs a **Shannon Entropy** calculation on staged alphanumeric tokens. If a string of length 24–64 displays a high degree of character randomness and contains mixed cases/numbers, the scanner will flag it as a `High-Entropy Secret Candidate` warning.
+
+### 🔄 Exponential Backoff & Retry
+OpenAI API calls automatically attempt to retry up to 3 times with exponential backoff on transient network drops, rate limits (`429`), or internal LLM server errors (`5xx`), ensuring resilient performance during unstable connection periods.
 
 ---
 

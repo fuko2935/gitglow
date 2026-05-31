@@ -10,14 +10,36 @@ import { executeScan } from './commands/security.js';
 import { hasStagedFiles, getStagedDiff } from './utils/git.js';
 import { loadConfig } from './utils/config.js';
 import chalk from 'chalk';
-import { GitError } from './types/index.js';
+import { GitError, CLIError } from './types/index.js';
+
+// Setup --no-color global check before commander starts so chalk is configured early
+if (process.argv.includes('--no-color')) {
+  chalk.level = 0;
+}
 
 export const program = new Command();
 
 program
   .name('gitglow')
   .description('AI-assisted git commit messages, PR descriptions, and staged secret scanning.')
-  .version('1.0.0');
+  .version('1.0.0')
+  .option('--no-color', 'Disable colored terminal output');
+
+/** Unified error handler for all CLI actions */
+function handleError(err: unknown): never {
+  if (err instanceof CLIError) {
+    if (err.message) {
+      console.error(chalk.red(`✗ ${err.message}`));
+    }
+    process.exit(err.exitCode);
+  } else if (err instanceof GitError) {
+    console.error(chalk.red(`✗ Git error: ${err.message}`));
+    process.exit(1);
+  } else {
+    console.error(chalk.red('✗ Unexpected error:'), err);
+    process.exit(1);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // gitglow commit
@@ -38,12 +60,7 @@ program
         dryRun: options.dryRun,
       });
     } catch (err) {
-      if (err instanceof GitError) {
-        console.error(chalk.red(`✗ Git error: ${err.message}`));
-      } else {
-        console.error(chalk.red('✗ Unexpected error:'), err);
-      }
-      process.exit(1);
+      handleError(err);
     }
   });
 
@@ -70,12 +87,7 @@ program
       const clean = executeScan(diff, config, options.json);
       process.exit(clean ? 0 : 1);
     } catch (err) {
-      if (err instanceof GitError) {
-        console.error(chalk.red(`✗ Git error: ${err.message}`));
-      } else {
-        console.error(chalk.red('✗ Unexpected error:'), err);
-      }
-      process.exit(1);
+      handleError(err);
     }
   });
 
@@ -112,12 +124,7 @@ program
           dryRun: options.dryRun,
         });
       } catch (err) {
-        if (err instanceof GitError) {
-          console.error(chalk.red(`✗ Git error: ${err.message}`));
-        } else {
-          console.error(chalk.red('✗ Unexpected error:'), err);
-        }
-        process.exit(1);
+        handleError(err);
       }
     },
   );
