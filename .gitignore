@@ -2,3 +2,8 @@ node_modules
 dist
 .env
 *.log
+coverage
+
+# GitGlow config – NEVER commit API keys to this file
+# See README: use OPENAI_API_KEY environment variable instead
+# .gitglow.json  ← uncomment this line if you want to exclude it from your repo
