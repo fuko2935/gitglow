@@ -17,8 +17,6 @@ export interface SecurityPattern {
 }
 
 export interface GitGlowConfig {
-  /** OpenAI API key – prefer OPENAI_API_KEY env var instead */
-  openaiApiKey?: string;
   /** Language for AI-generated text (e.g. 'en', 'tr') */
   language: string;
   /** Allowed Conventional Commit types */

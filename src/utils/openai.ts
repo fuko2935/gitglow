@@ -100,7 +100,7 @@ export async function generateCommitMessage(
   config: GitGlowConfig,
   forceMock = false,
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY ?? config.openaiApiKey;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey || forceMock) {
     // Honest mock – clearly labelled, no hallucinated facts
@@ -150,7 +150,7 @@ export async function generatePRDescription(
   config: GitGlowConfig,
   forceMock = false,
 ): Promise<string> {
-  const apiKey = process.env.OPENAI_API_KEY ?? config.openaiApiKey;
+  const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey || forceMock) {
     // Honest mock – no fabricated test results
