@@ -62,11 +62,23 @@ graph TD
 - **Node.js**: `v18.0.0` or higher.
 - **Git**: Properly configured in your local path.
 
-### 2. Installation
-Clone the repository and install dependencies:
+### 2. Installation & Usage
+
+#### Option A: Run instantly via `npx` (No setup required!)
+```bash
+npx @fukobabatekkral/gitglow commit
+```
+
+#### Option B: Install globally
+```bash
+npm install -g @fukobabatekkral/gitglow
+@fukobabatekkral/gitglow --help
+```
+
+#### Option C: Clone and build from source
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/gitglow.git
+git clone https://github.com/fuko2935/gitglow.git
 cd gitglow
 
 # Install dependencies and build
