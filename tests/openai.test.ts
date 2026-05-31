@@ -33,6 +33,17 @@ describe('generateCommitMessage – mock mode', () => {
     expect(msg).toMatch(/^feat/);
   });
 
+  it('ignores API keys supplied through config objects', async () => {
+    delete process.env.OPENAI_API_KEY;
+    global.fetch = vi.fn().mockRejectedValue(new Error('fetch should not be called'));
+    const configWithKey = { ...mockConfig, openaiApiKey: 'sk-config-key-should-not-be-used' };
+
+    const msg = await generateCommitMessage(mockDiff, configWithKey, false);
+
+    expect(msg).toMatch(/mock mode/i);
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
   it('does NOT claim tests passed in mock output', async () => {
     const msg = await generateCommitMessage(mockDiff, mockConfig, true);
     expect(msg.toLowerCase()).not.toMatch(/test.*pass/);

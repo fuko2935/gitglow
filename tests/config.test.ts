@@ -90,6 +90,6 @@ describe('loadConfig – error handling', () => {
     const msgs = warnSpy.mock.calls.map(c => c[0] as string);
     expect(msgs.some(m => m.includes('openaiApiKey'))).toBe(true);
     expect(msgs.some(m => m.match(/security warning/i))).toBe(true);
-    expect(config.openaiApiKey).toBeUndefined();
+    expect('openaiApiKey' in config).toBe(false);
   });
 });
