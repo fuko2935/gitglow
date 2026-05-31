@@ -4,7 +4,7 @@
 
 ### *AI-Assisted Git Commit & PR Automation CLI*
 
-[![CI](https://github.com/fukobabatekkral/gitglow/actions/workflows/ci.yml/badge.svg)](https://github.com/fukobabatekkral/gitglow/actions/workflows/ci.yml)
+[![CI](https://github.com/fuko2935/gitglow/actions/workflows/ci.yml/badge.svg)](https://github.com/fuko2935/gitglow/actions/workflows/ci.yml)
 [![Node version](https://img.shields.io/badge/node-%3E%3D%2018.0.0-blue?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-Apache%202.0-orange?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-purple?style=for-the-badge)](CONTRIBUTING.md)
@@ -72,7 +72,7 @@ graph TD
 
 ```bash
 # Clone and install globally
-git clone https://github.com/fukobabatekkral/gitglow.git
+git clone https://github.com/fuko2935/gitglow.git
 cd gitglow
 npm install
 npm run build

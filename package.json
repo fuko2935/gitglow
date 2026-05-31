@@ -1,6 +1,6 @@
 {
   "name": "@fukobabatekkral/gitglow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-assisted git commit messages, PR descriptions, and staged secret scanning.",
   "main": "dist/index.js",
   "type": "module",
@@ -43,12 +43,12 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fukobabatekkral/gitglow"
+    "url": "https://github.com/fuko2935/gitglow"
   },
   "bugs": {
-    "url": "https://github.com/fukobabatekkral/gitglow/issues"
+    "url": "https://github.com/fuko2935/gitglow/issues"
   },
-  "homepage": "https://github.com/fukobabatekkral/gitglow#readme",
+  "homepage": "https://github.com/fuko2935/gitglow#readme",
   "dependencies": {
     "chalk": "^5.3.0",
     "clipboardy": "^4.0.0",

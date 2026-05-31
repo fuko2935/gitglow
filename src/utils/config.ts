@@ -31,7 +31,7 @@ export const DEFAULTS: GitGlowConfig = {
     },
     {
       name: 'OpenAI API Key',
-      regex: 'sk-[a-zA-Z0-9]{20}T3BlbkFJ[a-zA-Z0-9]{20}',
+      regex: 'sk-[a-zA-Z0-9_-]{32,}',
       severity: 'critical',
     },
     {
@@ -156,5 +156,12 @@ export function loadConfig(configPath?: string): GitGlowConfig {
     }
   }
 
-  return { ...DEFAULTS, ...parsed };
+  const sanitizedConfig: Partial<GitGlowConfig> = {};
+  for (const key of KNOWN_KEYS) {
+    if (key in parsed) {
+      (sanitizedConfig as Record<string, unknown>)[key] = parsed[key];
+    }
+  }
+
+  return { ...DEFAULTS, ...sanitizedConfig };
 }
