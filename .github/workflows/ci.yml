@@ -2,33 +2,52 @@ name: GitGlow CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test:
-    name: Build & Test (Node ${{ matrix.node }})
+  ci:
+    name: CI (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node: [18, 20]
 
     steps:
-      - name: Checkout Code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
-          cache: 'npm'
+          cache: npm
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: npm ci
 
-      - name: Build Application
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
         run: npm run build
 
-      - name: Run Unit Tests
+      - name: Unit tests
         run: npm run test
+
+      - name: Audit dependencies
+        run: npm audit --omit=dev
+
+      - name: Package smoke test
+        run: npm pack --dry-run
+
+      - name: CLI smoke tests
+        run: |
+          node dist/index.js --help
+          node dist/index.js commit --help
+          node dist/index.js scan --help
+          node dist/index.js pr --help
