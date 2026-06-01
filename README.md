@@ -265,6 +265,13 @@ npm run test:coverage
 
 ---
 
+## 👥 Contributors
+
+- [fuko2935](https://github.com/fuko2935)
+- [hektor808](https://github.com/hektor808)
+
+---
+
 ## 📄 License
 
 Apache License 2.0 — see [LICENSE](./LICENSE) for details.
